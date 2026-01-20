@@ -545,3 +545,101 @@ a:hover {
   }
 }
 
+/* 달력 스타일 */
+.calendar-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 16px;
+}
+
+.calendar-weekday-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.calendar-weekday {
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #6b7280;
+  padding: 8px 4px;
+}
+
+.calendar-week-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.calendar-day {
+  aspect-ratio: 1;
+  min-height: 60px;
+  padding: 6px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  transition: all 0.15s ease-out;
+}
+
+.calendar-day:hover {
+  border-color: #93c5fd;
+  background: #f9fafb;
+}
+
+.calendar-day--other-month {
+  opacity: 0.4;
+  background: #f9fafb;
+}
+
+.calendar-day--today {
+  border-color: #3b82f6;
+  background: #eff6ff;
+  font-weight: 600;
+}
+
+.calendar-day-number {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #111827;
+  margin-bottom: 4px;
+}
+
+.calendar-day-usage {
+  font-size: 0.7rem;
+  color: #3b82f6;
+  font-weight: 600;
+  text-align: center;
+  margin-top: auto;
+  padding: 2px 4px;
+  background: #dbeafe;
+  border-radius: 4px;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .calendar-day {
+    min-height: 50px;
+    padding: 4px;
+  }
+
+  .calendar-day-number {
+    font-size: 0.75rem;
+  }
+
+  .calendar-day-usage {
+    font-size: 0.65rem;
+    padding: 1px 2px;
+  }
+
+  .calendar-weekday {
+    font-size: 0.75rem;
+    padding: 6px 2px;
+  }
+}

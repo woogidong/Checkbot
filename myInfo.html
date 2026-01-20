@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>개인정보 및 이용 기록 | Checkbot</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <main class="card">
+        <header class="app-header">
+          <div class="app-title-group">
+            <h1 class="app-title">개인정보 및 이용 기록</h1>
+            <p class="app-subtitle">면학실 좌석 이용 기록을 확인할 수 있습니다.</p>
+            <div
+              id="user-info-bar"
+              class="muted"
+              style="font-size: 0.85rem; margin-top: 6px; display: flex; flex-wrap: wrap; gap: 6px;"
+            >
+              <span id="user-name-display">이름 없음</span>
+              <span>(</span>
+              <span id="user-student-id-display">학번 없음</span>
+              <span>) · </span>
+              <span id="user-email-display">이메일 없음</span>
+            </div>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <a href="/student.html" class="btn btn-outline btn-sm">좌석 신청</a>
+            <a href="/index.html" class="btn btn-outline btn-sm">메인으로</a>
+          </div>
+        </header>
+
+        <section class="app-main">
+          <!-- 월별 통계 -->
+          <section class="app-section">
+            <div class="app-section-header">
+              <h2 class="app-section-title">월별 이용 통계</h2>
+            </div>
+            <div class="app-section-body">
+              <div id="monthly-stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+                <!-- 월별 통계가 여기에 동적으로 생성됩니다 -->
+              </div>
+            </div>
+          </section>
+
+          <!-- 달력 및 이용 기록 -->
+          <section class="app-section">
+            <div class="app-section-header">
+              <h2 class="app-section-title">이용 기록 달력</h2>
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <button type="button" class="btn btn-outline btn-sm" id="btn-prev-month">◀ 이전</button>
+                <span id="current-month-display" style="font-weight: 600; min-width: 150px; text-align: center;">2024년 1월</span>
+                <button type="button" class="btn btn-outline btn-sm" id="btn-next-month">다음 ▶</button>
+              </div>
+            </div>
+            <div class="app-section-body">
+              <div id="calendar-container">
+                <!-- 달력이 여기에 동적으로 생성됩니다 -->
+              </div>
+            </div>
+          </section>
+
+          <!-- 상세 이용 기록 목록 -->
+          <section class="app-section">
+            <div class="app-section-header">
+              <h2 class="app-section-title">상세 이용 기록</h2>
+            </div>
+            <div class="app-section-body">
+              <div id="usage-list-container">
+                <!-- 이용 기록 목록이 여기에 동적으로 생성됩니다 -->
+              </div>
+            </div>
+          </section>
+        </section>
+
+        <footer class="app-footer">
+          <div class="pill">
+            <span class="pill-dot"></span>
+            <span>운영 중 · 학교 내 전용</span>
+          </div>
+          <div class="app-footer-links">
+            <span class="muted">Checkbot · Library Seat Manager</span>
+          </div>
+        </footer>
+      </main>
+    </div>
+
+    <script type="module" src="/src/myInfo.js"></script>
+  </body>
+</html>

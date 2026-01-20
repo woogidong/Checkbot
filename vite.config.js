@@ -10,6 +10,7 @@ export default defineConfig({
         main: resolve(__dirname, 'index.html'),
         student: resolve(__dirname, 'student.html'),
         teacherMonitor: resolve(__dirname, 'teacherMonitor.html'),
+        myInfo: resolve(__dirname, 'myInfo.html'),
       },
     },
   },
