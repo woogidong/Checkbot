@@ -1,0 +1,48 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 관리자 UID 목록 (여러 명 지정 가능)
+    // Firebase 콘솔에서 Authentication > Users에서 UID를 확인할 수 있습니다.
+    // 필요에 따라 UID를 추가하거나 변경하세요.
+    function isAdmin() {
+      return request.auth != null && 
+             request.auth.uid in [
+               'YOUR_ADMIN_UID_1',  // 여기에 관리자 UID를 입력하세요
+               'YOUR_ADMIN_UID_2'   // 여러 명의 관리자를 추가할 수 있습니다
+             ];
+    }
+    
+    // 좌석 사용 기록 컬렉션
+    match /seatUsages/{documentId} {
+      // 읽기: 모든 사람이 가능 (로그인 여부 무관)
+      // - 현재 좌석 이용 현황을 누구나 볼 수 있음
+      allow read: if true;
+      
+      // 쓰기: 로그인한 사용자만 가능
+      // - Google 로그인한 사용자는 자신의 좌석 사용 기록을 저장할 수 있음
+      allow create: if request.auth != null;
+      allow update: if false; // 업데이트는 불가 (새로운 문서로만 기록)
+      
+      // 삭제: 관리자만 가능
+      allow delete: if isAdmin();
+    }
+    
+    // 사용자 프로필 컬렉션 (필요한 경우)
+    match /profiles/{userId} {
+      // 읽기: 본인 또는 관리자만 가능
+      allow read: if request.auth != null && 
+                     (request.auth.uid == userId || isAdmin());
+      
+      // 쓰기: 본인만 가능 (생성 및 업데이트)
+      allow write: if request.auth != null && request.auth.uid == userId;
+      
+      // 삭제: 관리자만 가능
+      allow delete: if isAdmin();
+    }
+    
+    // 기타 컬렉션은 기본적으로 거부
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
