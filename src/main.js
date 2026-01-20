@@ -236,16 +236,39 @@ document.addEventListener('DOMContentLoaded', () => {
     const seat = getSeatByNumber(seatNumber)
     if (!seat) return
 
+    // 이미 사용 중인 좌석인지 확인
+    if (seat.status === 'occupied') {
+      // 본인이 사용 중인 좌석인지 확인 (좌석 변경 시나리오)
+      const isMySeat = restoredSeatNumber === seat.number
+      
+      if (!isMySeat) {
+        // 다른 사람이 사용 중인 좌석이면 신청 불가
+        const occupantInfo = seat.studentId && seat.studentName 
+          ? `${seat.studentId} ${seat.studentName}` 
+          : '다른 사용자'
+        alert(
+          `⚠️ ${seat.number}번 좌석은 현재 사용 중입니다.\n\n` +
+          `사용자: ${occupantInfo}\n\n` +
+          `다른 좌석을 선택해주세요.`
+        )
+        selectedSeatNumber = null
+        return
+      }
+      // 본인이 사용 중인 좌석이면 모달을 띄우지 않고 정보만 표시
+      seatInfoMain.textContent = `${seat.number}번 좌석을 사용 중입니다.`
+      seatInfoSub.textContent = `사용자: ${seat.studentId} ${seat.studentName} ｜ 시작 시각: ${formatStartedAtKorean(
+        seat.startedAt
+      )}`
+      return
+    }
+
+    // 사용 가능한 좌석이면 모달 띄우기
     modalSeatLabel.textContent = String(seat.number)
     modalBackdrop.classList.remove('hidden')
 
     // 좌석 요약 정보 갱신
     seatInfoMain.textContent = `${seat.number}번 좌석을 선택했습니다.`
-    if (seat.status === 'occupied' && seat.studentId && seat.studentName) {
-      seatInfoSub.textContent = `현재 사용 중: ${seat.studentId} ${seat.studentName}`
-    } else {
-      seatInfoSub.textContent = '사용을 누르면 학번·이름을 입력하고 좌석을 사용할 수 있습니다.'
-    }
+    seatInfoSub.textContent = '사용을 누르면 학번·이름을 입력하고 좌석을 사용할 수 있습니다.'
   }
 
   function closeSeatModal() {
@@ -407,6 +430,20 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!currentUser || !currentProfile) {
       alert('로그인 또는 학번/이름 정보가 없습니다. 메인 화면으로 돌아가 다시 로그인해 주세요.')
       window.location.href = '/index.html'
+      return
+    }
+
+    // 이미 사용 중인 좌석인지 재확인 (모달이 띄워진 후 상태가 변경될 수 있음)
+    if (seat.status === 'occupied' && restoredSeatNumber !== seat.number) {
+      const occupantInfo = seat.studentId && seat.studentName 
+        ? `${seat.studentId} ${seat.studentName}` 
+        : '다른 사용자'
+      alert(
+        `⚠️ ${seat.number}번 좌석은 현재 사용 중입니다.\n\n` +
+        `사용자: ${occupantInfo}\n\n` +
+        `다른 좌석을 선택해주세요.`
+      )
+      closeSeatModal()
       return
     }
 

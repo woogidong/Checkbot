@@ -1,33 +1,57 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // 관리자 UID 목록 (여러 명 지정 가능)
-    // Firebase 콘솔에서 Authentication > Users에서 UID를 확인할 수 있습니다.
-    // 필요에 따라 UID를 추가하거나 변경하세요.
+    // ============================================
+    // 관리자 UID 설정
+    // ============================================
+    // Firebase 콘솔 > Authentication > Users에서 UID를 확인할 수 있습니다.
+    // 관리자로 지정할 사용자의 UID를 아래 배열에 추가하세요.
+    // 여러 명의 관리자를 지정할 수 있습니다.
     function isAdmin() {
       return request.auth != null && 
              request.auth.uid in [
-               'YOUR_ADMIN_UID_1',  // 여기에 관리자 UID를 입력하세요
-               'YOUR_ADMIN_UID_2'   // 여러 명의 관리자를 추가할 수 있습니다
+               'YOUR_ADMIN_UID_1',  // ⚠️ 여기에 관리자 UID를 입력하세요
+               'YOUR_ADMIN_UID_2'   // 필요시 여러 명 추가 가능
              ];
     }
     
-    // 좌석 사용 기록 컬렉션
+    // ============================================
+    // 좌석 사용 기록 컬렉션 (seatUsages)
+    // ============================================
+    // 저장되는 데이터:
+    // - seatId, seatNumber: 좌석 번호
+    // - userName, studentId: 사용자 이름과 학번
+    // - email: Google 이메일
+    // - clickedAt, date, time: 좌석 사용 날짜와 시간
+    // - createdAt: 서버 타임스탬프
+    // - released: 사용 종료 여부 (true/false)
     match /seatUsages/{documentId} {
-      // 읽기: 모든 사람이 가능 (로그인 여부 무관)
-      // - 현재 좌석 이용 현황을 누구나 볼 수 있음
+      // 읽기 규칙:
+      // 1. 모든 사람이 읽을 수 있음 (로그인 여부 무관)
+      //    → 현재 좌석 이용 현황을 누구나 볼 수 있음
+      // 2. 관리자는 모든 데이터를 읽을 수 있음 (이미 위에서 허용됨)
       allow read: if true;
       
-      // 쓰기: 로그인한 사용자만 가능
-      // - Google 로그인한 사용자는 자신의 좌석 사용 기록을 저장할 수 있음
+      // 생성 규칙:
+      // - Google 로그인한 사용자만 자신의 좌석 사용 기록을 저장할 수 있음
+      // - 로그인한 모든 사용자가 생성 가능 (자신의 기록이므로)
       allow create: if request.auth != null;
-      allow update: if false; // 업데이트는 불가 (새로운 문서로만 기록)
       
-      // 삭제: 관리자만 가능
+      // 업데이트 규칙:
+      // - 업데이트는 불가 (새로운 문서로만 기록)
+      // - 좌석 변경 시 기존 문서는 released=true로 새로 생성
+      allow update: if false;
+      
+      // 삭제 규칙:
+      // - 관리자만 삭제 가능
+      // - 필요 시 잘못된 기록을 삭제할 수 있음
       allow delete: if isAdmin();
     }
     
-    // 사용자 프로필 컬렉션 (필요한 경우)
+    // ============================================
+    // 사용자 프로필 컬렉션 (profiles) - 선택사항
+    // ============================================
+    // 사용자 프로필 정보를 저장하는 경우 사용
     match /profiles/{userId} {
       // 읽기: 본인 또는 관리자만 가능
       allow read: if request.auth != null && 
@@ -40,7 +64,10 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
     
-    // 기타 컬렉션은 기본적으로 거부
+    // ============================================
+    // 기타 컬렉션 접근 제한
+    // ============================================
+    // 위에서 명시하지 않은 모든 컬렉션은 접근 불가
     match /{document=**} {
       allow read, write: if false;
     }
