@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>학생용 좌석 신청 | Checkbot</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <main class="card">
+        <header class="app-header">
+          <div class="app-title-group">
+            <h1 class="app-title">학생용 좌석 신청</h1>
+            <p class="app-subtitle">사용할 좌석을 선택해 주세요.</p>
+            <div
+              id="user-info-bar"
+              class="muted"
+              style="font-size: 0.85rem; margin-top: 6px; display: flex; flex-wrap: wrap; gap: 6px;"
+            >
+              <span id="user-name-display">이름 없음</span>
+              <span>(</span>
+              <span id="user-student-id-display">학번 없음</span>
+              <span>) · </span>
+              <span id="user-email-display">이메일 없음</span>
+            </div>
+          </div>
+          <a href="/index.html" class="btn btn-outline btn-sm">메인으로 돌아가기</a>
+        </header>
+
+        <section class="seat-layout-main">
+          <section class="seat-panel">
+            <div class="seat-panel-header">
+              <div>
+                <div class="seat-panel-title">좌석 선택</div>
+                
+              </div>
+              <div class="seat-legend">
+                <div class="seat-legend-item">
+                  <span class="seat-legend-color available"></span>
+                  <span>이용 가능</span>
+                </div>
+                <div class="seat-legend-item">
+                  <span class="seat-legend-color occupied"></span>
+                  <span>사용 중</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="seat-room-layout" aria-label="좌석 목록">
+              <div class="seat-column seat-column-left">
+                <div class="door-label">출입문</div>
+                <div id="seat-left-top" class="seat-column-inner"></div>
+                <div class="door-label door-label-bottom">출입문</div>
+                <div id="seat-left-bottom" class="seat-column-inner"></div>
+              </div>
+
+              <div class="seat-column-spacer"></div>
+
+              <div class="seat-column seat-column-right">
+                <div id="seat-right-top" class="seat-column-inner"></div>
+                <div class="seat-column-gap-vertical"></div>
+                <div id="seat-right-bottom" class="seat-column-inner"></div>
+              </div>
+            </div>
+
+            <div class="seat-bottom-wrapper">
+              <div id="seat-bottom-row" class="seat-bottom-row"></div>
+            </div>
+          </section>
+
+          <section class="seat-panel">
+            <div class="seat-panel-header">
+              <div class="seat-panel-title">선택한 좌석 정보</div>
+            </div>
+            <div class="seat-info-box">
+              <div class="seat-info-label">현재 상태</div>
+              <div class="seat-info-main" id="seat-info-main">좌석을 선택하면 정보가 표시됩니다.</div>
+              <div class="seat-info-sub" id="seat-info-sub">
+                사용을 누른 시각은 이후 Firebase로 전송할 예정입니다.
+              </div>
+            </div>
+            <div style="margin-top: 10px;">
+              <button
+                type="button"
+                class="btn btn-outline btn-sm"
+                id="btn-seat-release"
+                disabled
+              >
+                사용 종료
+              </button>
+            </div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <!-- 좌석 사용 확인 모달 -->
+    <div id="seat-modal-backdrop" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+      <div class="modal" id="seat-modal">
+        <div class="modal-header">
+          <div class="modal-title">좌석 사용 확인</div>
+        </div>
+        <div class="modal-body">
+          <p>
+            <span class="modal-seat-label" id="modal-seat-label"></span>
+            번 좌석을
+          </p>
+          <p>해당 좌석을 사용하겠습니까?</p>
+          <p class="muted" style="margin-top: 8px; font-size: 0.8rem;">
+            (로그인 시 등록한 학번·이름과 Google 이메일 정보가 함께 기록됩니다.)
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline btn-sm" id="btn-seat-cancel">취소</button>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-seat-use">사용</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
