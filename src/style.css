@@ -261,7 +261,7 @@ a:hover {
   align-items: center;
   justify-content: center;
   padding: 6px 4px;
-  min-height: 50px;
+  min-height: 48px;
   border-radius: 10px;
   border: 1px solid #e5e7eb;
   background: white;
@@ -288,7 +288,7 @@ a:hover {
 
 .seat-meta {
   margin-top: 2px;
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   color: #4b5563;
   text-align: center;
   word-break: keep-all;
@@ -310,7 +310,7 @@ a:hover {
 .seat-legend {
   display: flex;
   gap: 10px;
-  font-size: 0.8rem;
+  font-size: 0.74rem;
   color: #6b7280;
 }
 
@@ -515,6 +515,25 @@ a:hover {
   .seat-room-layout {
     gap: 40px;
     margin-top: 12px;
+  }
+
+  .seat {
+    min-height: 42px;
+    padding: 4px 3px;
+    font-size: 0.64rem;
+  }
+
+  .seat-meta {
+    font-size: 0.58rem;
+  }
+
+  .seat-column-left .seat,
+  .seat-column-right .seat {
+    min-width: 56px;
+  }
+
+  .seat-bottom-row .seat {
+    min-width: 48px;
   }
 
   .app-title {
