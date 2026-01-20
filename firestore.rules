@@ -27,10 +27,14 @@ service cloud.firestore {
     // - released: 사용 종료 여부 (true/false)
     match /seatUsages/{documentId} {
       // 읽기 규칙:
-      // 1. 모든 사람이 읽을 수 있음 (로그인 여부 무관)
-      //    → 현재 좌석 이용 현황을 누구나 볼 수 있음
-      // 2. 관리자는 모든 데이터를 읽을 수 있음 (이미 위에서 허용됨)
-      allow read: if true;
+      // 1. 관리자는 모든 데이터를 읽을 수 있음
+      // 2. 로그인한 사용자는 자신의 이메일과 일치하는 기록만 읽을 수 있음
+      //    → 개인정보 페이지에서 자신의 기록만 조회 가능
+      // 3. 모든 사람이 읽을 수 있음 (현재 좌석 이용 현황 조회용)
+      //    → student.html, teacherMonitor.html에서 사용
+      allow read: if isAdmin() || 
+                     (request.auth != null && resource.data.email == request.auth.token.email) ||
+                     true; // 현재 좌석 현황 조회를 위해 모든 사람 허용
       
       // 생성 규칙:
       // - Google 로그인한 사용자만 자신의 좌석 사용 기록을 저장할 수 있음

@@ -87,10 +87,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     try {
+      // orderBy 없이 먼저 쿼리 (인덱스 문제 방지)
       const q = query(
         collection(db, 'seatUsages'),
-        where('email', '==', currentUser.email),
-        orderBy('clickedAt', 'desc')
+        where('email', '==', currentUser.email)
       )
 
       const querySnapshot = await getDocs(q)
@@ -98,10 +98,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
       querySnapshot.forEach((doc) => {
         const data = doc.data()
-        allUsageRecords.push({
-          id: doc.id,
-          ...data,
-        })
+        // clickedAt 필드가 있는 문서만 추가
+        if (data.clickedAt) {
+          allUsageRecords.push({
+            id: doc.id,
+            ...data,
+          })
+        }
+      })
+
+      // 클라이언트 측에서 정렬 (최신순)
+      allUsageRecords.sort((a, b) => {
+        const timeA = a.clickedAt ? new Date(a.clickedAt).getTime() : 0
+        const timeB = b.clickedAt ? new Date(b.clickedAt).getTime() : 0
+        return timeB - timeA // 내림차순 (최신순)
       })
 
       console.log(`✅ ${allUsageRecords.length}개의 이용 기록을 불러왔습니다.`)
@@ -110,7 +120,30 @@ document.addEventListener('DOMContentLoaded', () => {
       renderUsageList()
     } catch (error) {
       console.error('이용 기록 조회 중 오류 발생:', error)
-      alert('이용 기록을 불러오는 중 오류가 발생했습니다.')
+      console.error('에러 상세:', {
+        code: error?.code,
+        message: error?.message,
+        stack: error?.stack,
+      })
+      
+      let errorMessage = '이용 기록을 불러오는 중 오류가 발생했습니다.\n\n'
+      
+      if (error?.code === 'permission-denied') {
+        errorMessage += '⚠️ Firestore 규칙 문제: 이용 기록을 읽을 권한이 없습니다.\n\n'
+        errorMessage += 'Firebase 콘솔에서 Firestore 규칙을 확인해주세요.\n'
+        errorMessage += '개인정보 페이지에서 자신의 기록을 읽을 수 있도록 규칙이 설정되어 있어야 합니다.'
+      } else if (error?.code === 'failed-precondition') {
+        errorMessage += '⚠️ 인덱스 문제: Firestore 인덱스가 필요합니다.\n\n'
+        errorMessage += 'Firebase 콘솔에서 제안된 인덱스를 생성해주세요.'
+      } else if (error?.code === 'unavailable') {
+        errorMessage += '⚠️ 네트워크 문제: Firestore에 연결할 수 없습니다.\n\n'
+        errorMessage += '인터넷 연결을 확인하고 잠시 후 다시 시도해주세요.'
+      } else {
+        errorMessage += `에러 코드: ${error?.code || '알 수 없음'}\n`
+        errorMessage += `에러 메시지: ${error?.message || '알 수 없음'}`
+      }
+      
+      alert(errorMessage)
     }
   }
 
