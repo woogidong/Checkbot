@@ -23,15 +23,29 @@ const firebaseConfig = {
 
 // 필수 값이 없는지 간단히 체크
 if (!firebaseConfig.apiKey || !firebaseConfig.projectId || !firebaseConfig.appId) {
-  console.warn(
-    'Firebase 설정값이 올바르게 세팅되지 않았습니다. .env 파일에서 VITE_FIREBASE_* 값을 확인해 주세요.'
+  console.error(
+    '❌ Firebase 설정값이 올바르게 세팅되지 않았습니다. .env 파일에서 VITE_FIREBASE_* 값을 확인해 주세요.'
   )
+  console.error('현재 설정:', {
+    apiKey: firebaseConfig.apiKey ? '설정됨' : '누락',
+    projectId: firebaseConfig.projectId ? '설정됨' : '누락',
+    appId: firebaseConfig.appId ? '설정됨' : '누락',
+  })
 }
 
-const app = initializeApp(firebaseConfig)
-const auth = getAuth(app)
-const provider = new GoogleAuthProvider()
-const db = getFirestore(app)
+let app, auth, provider, db
+
+try {
+  app = initializeApp(firebaseConfig)
+  auth = getAuth(app)
+  provider = new GoogleAuthProvider()
+  db = getFirestore(app)
+  
+  console.log('✅ Firebase 초기화 완료')
+} catch (error) {
+  console.error('❌ Firebase 초기화 실패:', error)
+  throw error
+}
 
 export { app, auth, provider, db }
 

@@ -254,66 +254,141 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function recordSeatUsageStart(seat) {
-    if (!currentUser || !currentProfile) {
-      console.warn('로그인/프로필 정보가 없어 Firestore에 저장하지 못했습니다.')
-      return
+    try {
+      // 필수 데이터 검증
+      if (!currentUser || !currentProfile) {
+        console.warn('로그인/프로필 정보가 없어 Firestore에 저장하지 못했습니다.')
+        return
+      }
+
+      if (!seat || !seat.id || !seat.number) {
+        console.error('좌석 정보가 올바르지 않습니다:', seat)
+        return
+      }
+
+      if (!db) {
+        console.error('Firestore 데이터베이스가 초기화되지 않았습니다.')
+        return
+      }
+
+      if (!currentUser.email || !currentProfile.studentId || !currentProfile.studentName) {
+        console.error('필수 사용자 정보가 누락되었습니다:', {
+          email: currentUser.email,
+          studentId: currentProfile.studentId,
+          studentName: currentProfile.studentName,
+        })
+        return
+      }
+
+      const now = new Date()
+      const yyyy = now.getFullYear()
+      const mm = String(now.getMonth() + 1).padStart(2, '0')
+      const dd = String(now.getDate()).padStart(2, '0')
+      const hh = String(now.getHours()).padStart(2, '0')
+      const min = String(now.getMinutes()).padStart(2, '0')
+
+      const dateStr = `${yyyy}-${mm}-${dd}`
+      const timeStr = `${hh}:${min}`
+      const clickedAtIso = now.toISOString()
+
+      const payload = {
+        seatId: Number(seat.id) || seat.id,
+        seatNumber: Number(seat.number) || seat.number,
+        userName: String(currentProfile.studentName || '').trim(),
+        studentId: String(currentProfile.studentId || '').trim(),
+        email: String(currentUser.email || '').trim(),
+        clickedAt: clickedAtIso,
+        date: dateStr,
+        time: timeStr,
+        createdAt: serverTimestamp(),
+        released: false,
+      }
+
+      // 최종 데이터 검증
+      if (!payload.seatNumber || !payload.studentId || !payload.userName || !payload.email) {
+        console.error('페이로드 데이터 검증 실패:', payload)
+        return
+      }
+
+      await addDoc(collection(db, 'seatUsages'), payload)
+      console.log('좌석 사용 기록이 성공적으로 저장되었습니다:', payload.seatNumber)
+    } catch (error) {
+      console.error('좌석 사용 기록 저장 중 오류 발생:', {
+        error,
+        code: error?.code,
+        message: error?.message,
+        seat: seat?.number,
+        user: currentUser?.email,
+      })
+      throw error // 상위에서 처리할 수 있도록 에러 재발생
     }
-
-    const now = new Date()
-    const yyyy = now.getFullYear()
-    const mm = String(now.getMonth() + 1).padStart(2, '0')
-    const dd = String(now.getDate()).padStart(2, '0')
-    const hh = String(now.getHours()).padStart(2, '0')
-    const min = String(now.getMinutes()).padStart(2, '0')
-
-    const dateStr = `${yyyy}-${mm}-${dd}`
-    const timeStr = `${hh}:${min}`
-    const clickedAtIso = now.toISOString()
-
-    const payload = {
-      seatId: seat.id,
-      seatNumber: seat.number,
-      userName: currentProfile.studentName,
-      studentId: currentProfile.studentId,
-      email: currentUser.email,
-      clickedAt: clickedAtIso, // 좌석 사용하기 버튼을 누른 시간 (ISO)
-      date: dateStr, // 활동 날짜 (YYYY-MM-DD)
-      time: timeStr, // 활동 시간 (HH:mm)
-      createdAt: serverTimestamp(), // Firestore 서버 기준 시간
-      released: false,
-    }
-
-    await addDoc(collection(db, 'seatUsages'), payload)
   }
 
   async function recordSeatRelease(seat) {
-    if (!currentUser || !currentProfile) return
+    try {
+      // 필수 데이터 검증
+      if (!currentUser || !currentProfile) {
+        console.warn('로그인/프로필 정보가 없어 해제 기록을 저장하지 못했습니다.')
+        return
+      }
 
-    const now = new Date()
-    const yyyy = now.getFullYear()
-    const mm = String(now.getMonth() + 1).padStart(2, '0')
-    const dd = String(now.getDate()).padStart(2, '0')
-    const hh = String(now.getHours()).padStart(2, '0')
-    const min = String(now.getMinutes()).padStart(2, '0')
+      if (!seat || !seat.id || !seat.number) {
+        console.error('좌석 정보가 올바르지 않습니다:', seat)
+        return
+      }
 
-    const dateStr = `${yyyy}-${mm}-${dd}`
-    const timeStr = `${hh}:${min}`
-    const clickedAtIso = now.toISOString()
+      if (!db) {
+        console.error('Firestore 데이터베이스가 초기화되지 않았습니다.')
+        return
+      }
 
-    const payload = {
-      seatId: seat.id,
-      seatNumber: seat.number,
-      userName: currentProfile.studentName,
-      studentId: currentProfile.studentId,
-      email: currentUser.email,
-      clickedAt: clickedAtIso,
-      date: dateStr,
-      time: timeStr,
-      createdAt: serverTimestamp(),
-      released: true,
+      if (!currentUser.email || !currentProfile.studentId || !currentProfile.studentName) {
+        console.error('필수 사용자 정보가 누락되었습니다.')
+        return
+      }
+
+      const now = new Date()
+      const yyyy = now.getFullYear()
+      const mm = String(now.getMonth() + 1).padStart(2, '0')
+      const dd = String(now.getDate()).padStart(2, '0')
+      const hh = String(now.getHours()).padStart(2, '0')
+      const min = String(now.getMinutes()).padStart(2, '0')
+
+      const dateStr = `${yyyy}-${mm}-${dd}`
+      const timeStr = `${hh}:${min}`
+      const clickedAtIso = now.toISOString()
+
+      const payload = {
+        seatId: Number(seat.id) || seat.id,
+        seatNumber: Number(seat.number) || seat.number,
+        userName: String(currentProfile.studentName || '').trim(),
+        studentId: String(currentProfile.studentId || '').trim(),
+        email: String(currentUser.email || '').trim(),
+        clickedAt: clickedAtIso,
+        date: dateStr,
+        time: timeStr,
+        createdAt: serverTimestamp(),
+        released: true,
+      }
+
+      // 최종 데이터 검증
+      if (!payload.seatNumber || !payload.studentId || !payload.userName || !payload.email) {
+        console.error('페이로드 데이터 검증 실패:', payload)
+        return
+      }
+
+      await addDoc(collection(db, 'seatUsages'), payload)
+      console.log('좌석 해제 기록이 성공적으로 저장되었습니다:', payload.seatNumber)
+    } catch (error) {
+      console.error('좌석 해제 기록 저장 중 오류 발생:', {
+        error,
+        code: error?.code,
+        message: error?.message,
+        seat: seat?.number,
+        user: currentUser?.email,
+      })
+      throw error
     }
-
-    await addDoc(collection(db, 'seatUsages'), payload)
   }
 
   btnSeatCancel.addEventListener('click', () => {
@@ -366,12 +441,25 @@ document.addEventListener('DOMContentLoaded', () => {
       .catch((err) => {
         console.error('Firestore 저장 중 오류가 발생했습니다:', err)
         console.error('에러 상세:', {
-          code: err.code,
-          message: err.message,
-          stack: err.stack,
+          code: err?.code,
+          message: err?.message,
+          stack: err?.stack,
         })
-        // 에러가 발생해도 UI는 이미 업데이트되었으므로, 사용자에게는 조용히 알림만
-        // Firestore 규칙 문제일 수 있으므로 개발자 콘솔에서 확인 가능하도록 함
+        
+        // Firestore 규칙 문제인지 확인
+        if (err?.code === 'permission-denied') {
+          console.error(
+            '⚠️ Firestore 규칙 문제: seatUsages 컬렉션에 쓰기 권한이 없습니다.\n' +
+            'Firebase 콘솔에서 Firestore 규칙을 확인해주세요:\n' +
+            'match /seatUsages/{document} {\n' +
+            '  allow read, write: if request.auth != null;\n' +
+            '}'
+          )
+        } else if (err?.code === 'unavailable') {
+          console.error('⚠️ 네트워크 문제: Firestore에 연결할 수 없습니다.')
+        } else {
+          console.error('⚠️ 알 수 없는 오류:', err)
+        }
       })
     
     saveTodaySeat(currentUser.uid, seat)
