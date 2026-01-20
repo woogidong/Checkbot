@@ -398,7 +398,7 @@ document.addEventListener('DOMContentLoaded', () => {
     seatInfoSub.textContent = '사용을 누른 시각은 이후 Firebase로 전송할 예정입니다.'
   })
 
-  btnSeatUse.addEventListener('click', () => {
+  btnSeatUse.addEventListener('click', async () => {
     if (selectedSeatNumber === null) return
 
     const seat = getSeatByNumber(selectedSeatNumber)
@@ -410,71 +410,112 @@ document.addEventListener('DOMContentLoaded', () => {
       return
     }
 
-    // 이미 오늘 선택한 좌석이 있고, 다른 좌석을 선택한 경우: 기존 좌석 비우기 (좌석 변경)
-    if (restoredSeatNumber && restoredSeatNumber !== seat.number) {
-      const prevSeat = getSeatByNumber(restoredSeatNumber)
-      if (prevSeat) {
-        prevSeat.status = 'available'
-        prevSeat.studentId = null
-        prevSeat.studentName = null
-        prevSeat.startedAt = null
-
-        // 이전 좌석 해제 기록을 Firestore에 남김
-        recordSeatRelease(prevSeat).catch((err) => {
-          console.error('이전 좌석 해제 기록 저장 중 오류가 발생했습니다:', err)
-        })
-      }
+    // 버튼 비활성화 (중복 클릭 방지)
+    const originalButtonText = btnSeatUse.textContent || btnSeatUse.innerText || '사용'
+    btnSeatUse.disabled = true
+    if (btnSeatUse.querySelector('span')) {
+      btnSeatUse.querySelector('span').textContent = '저장 중...'
+    } else {
+      btnSeatUse.textContent = '저장 중...'
     }
 
-    // 좌석 상태 업데이트(한 번에 한 좌석만)
-    seat.status = 'occupied'
-    seat.studentId = currentProfile.studentId
-    seat.studentName = currentProfile.studentName
-    seat.startedAt = new Date().toISOString()
-    restoredSeatNumber = seat.number
+    try {
+      // 이미 오늘 선택한 좌석이 있고, 다른 좌석을 선택한 경우: 기존 좌석 비우기 (좌석 변경)
+      if (restoredSeatNumber && restoredSeatNumber !== seat.number) {
+        const prevSeat = getSeatByNumber(restoredSeatNumber)
+        if (prevSeat) {
+          // 이전 좌석 해제 기록을 Firestore에 먼저 저장
+          try {
+            await recordSeatRelease(prevSeat)
+            console.log('이전 좌석 해제 기록이 저장되었습니다.')
+          } catch (err) {
+            console.error('이전 좌석 해제 기록 저장 중 오류가 발생했습니다:', err)
+            // 해제 기록 실패해도 계속 진행
+          }
 
-    // Firestore 저장 시도 (에러가 발생해도 UI는 업데이트됨)
-    recordSeatUsageStart(seat)
-      .then(() => {
-        console.log('좌석 사용 기록이 Firestore에 저장되었습니다.')
-      })
-      .catch((err) => {
-        console.error('Firestore 저장 중 오류가 발생했습니다:', err)
-        console.error('에러 상세:', {
-          code: err?.code,
-          message: err?.message,
-          stack: err?.stack,
-        })
-        
-        // Firestore 규칙 문제인지 확인
-        if (err?.code === 'permission-denied') {
-          console.error(
-            '⚠️ Firestore 규칙 문제: seatUsages 컬렉션에 쓰기 권한이 없습니다.\n' +
-            'Firebase 콘솔에서 Firestore 규칙을 확인해주세요:\n' +
-            'match /seatUsages/{document} {\n' +
-            '  allow read, write: if request.auth != null;\n' +
-            '}'
-          )
-        } else if (err?.code === 'unavailable') {
-          console.error('⚠️ 네트워크 문제: Firestore에 연결할 수 없습니다.')
-        } else {
-          console.error('⚠️ 알 수 없는 오류:', err)
+          // 이전 좌석 상태 비우기
+          prevSeat.status = 'available'
+          prevSeat.studentId = null
+          prevSeat.studentName = null
+          prevSeat.startedAt = null
         }
+      }
+
+      // Firestore에 좌석 사용 기록 저장 (성공 후에만 UI 업데이트)
+      await recordSeatUsageStart(seat)
+      console.log('✅ 좌석 사용 기록이 Firestore에 저장되었습니다.')
+
+      // 저장 성공 후 UI 업데이트
+      seat.status = 'occupied'
+      seat.studentId = currentProfile.studentId
+      seat.studentName = currentProfile.studentName
+      seat.startedAt = new Date().toISOString()
+      restoredSeatNumber = seat.number
+
+      saveTodaySeat(currentUser.uid, seat)
+      renderSeats()
+
+      seatInfoMain.textContent = `${seat.number}번 좌석을 사용 중입니다.`
+      seatInfoSub.textContent = `사용자: ${seat.studentId} ${seat.studentName} ｜ 시작 시각: ${formatStartedAtKorean(
+        seat.startedAt
+      )}`
+
+      closeSeatModal()
+    } catch (err) {
+      console.error('❌ 좌석 사용 기록 저장 실패:', err)
+      console.error('에러 상세:', {
+        code: err?.code,
+        message: err?.message,
+        stack: err?.stack,
       })
-    
-    saveTodaySeat(currentUser.uid, seat)
-    renderSeats()
 
-    seatInfoMain.textContent = `${seat.number}번 좌석을 사용 중입니다.`
-    seatInfoSub.textContent = `사용자: ${seat.studentId} ${seat.studentName} ｜ 시작 시각: ${formatStartedAtKorean(
-      seat.startedAt
-    )}`
+      // Firestore 규칙 문제인지 확인
+      if (err?.code === 'permission-denied') {
+        alert(
+          '⚠️ Firestore 규칙 문제: 좌석 사용 기록을 저장할 권한이 없습니다.\n\n' +
+          'Firebase 콘솔에서 Firestore 규칙을 확인해주세요:\n' +
+          'match /seatUsages/{document} {\n' +
+          '  allow read, write: if request.auth != null;\n' +
+          '}'
+        )
+      } else if (err?.code === 'unavailable') {
+        alert('⚠️ 네트워크 문제: Firestore에 연결할 수 없습니다.\n잠시 후 다시 시도해주세요.')
+      } else {
+        alert(
+          '⚠️ 좌석 사용 기록 저장 중 오류가 발생했습니다.\n\n' +
+          '에러 코드: ' +
+          (err?.code || '알 수 없음') +
+          '\n에러 메시지: ' +
+          (err?.message || '알 수 없음') +
+          '\n\n개발자 콘솔에서 자세한 정보를 확인할 수 있습니다.'
+        )
+      }
 
-    closeSeatModal()
+      // UI 롤백 (저장 실패 시 원래 상태로)
+      if (restoredSeatNumber && restoredSeatNumber !== seat.number) {
+        const prevSeat = getSeatByNumber(restoredSeatNumber)
+        if (prevSeat) {
+          // 이전 좌석 상태 복원
+          prevSeat.status = 'occupied'
+          prevSeat.studentId = currentProfile.studentId
+          prevSeat.studentName = currentProfile.studentName
+          prevSeat.startedAt = loadTodaySeat(currentUser.uid)?.startedAt || new Date().toISOString()
+        }
+      }
+      renderSeats()
+    } finally {
+      // 버튼 다시 활성화
+      btnSeatUse.disabled = false
+      if (btnSeatUse.querySelector('span')) {
+        btnSeatUse.querySelector('span').textContent = '사용'
+      } else {
+        btnSeatUse.textContent = originalButtonText
+      }
+    }
   })
 
   // 사용 종료 버튼: 현재 사용 중인 좌석을 비우고 Firestore에 해제 기록 저장
-  btnSeatRelease.addEventListener('click', () => {
+  btnSeatRelease.addEventListener('click', async () => {
     if (!restoredSeatNumber) return
     const seat = getSeatByNumber(restoredSeatNumber)
     if (!seat) return
@@ -484,27 +525,78 @@ document.addEventListener('DOMContentLoaded', () => {
     )
     if (!confirmEnd) return
 
-    // 좌석 상태 비우기
-    seat.status = 'available'
-    seat.studentId = null
-    seat.studentName = null
-    seat.startedAt = null
-
-    recordSeatRelease(seat).catch((err) => {
-      console.error('좌석 사용 종료 기록 저장 중 오류가 발생했습니다:', err)
-      alert('좌석 사용 종료 기록 저장 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.')
-    })
-
-    // 오늘자 로컬 저장 삭제
-    if (currentUser) {
-      localStorage.removeItem(getTodaySeatKey(currentUser.uid))
+    // 버튼 비활성화 (중복 클릭 방지)
+    const originalReleaseButtonText = btnSeatRelease.textContent || btnSeatRelease.innerText || '사용 종료'
+    btnSeatRelease.disabled = true
+    if (btnSeatRelease.querySelector('span')) {
+      btnSeatRelease.querySelector('span').textContent = '종료 중...'
+    } else {
+      btnSeatRelease.textContent = '종료 중...'
     }
 
-    restoredSeatNumber = null
-    renderSeats()
-    seatInfoMain.textContent = '좌석을 선택하면 정보가 표시됩니다.'
-    seatInfoSub.textContent = '사용을 누른 시각은 이후 Firebase로 전송할 예정입니다.'
-    updateReleaseButtonState()
+    try {
+      // Firestore에 해제 기록 저장 (성공 후에만 UI 업데이트)
+      await recordSeatRelease(seat)
+      console.log('✅ 좌석 해제 기록이 Firestore에 저장되었습니다.')
+
+      // 저장 성공 후 UI 업데이트
+      seat.status = 'available'
+      seat.studentId = null
+      seat.studentName = null
+      seat.startedAt = null
+
+      // 오늘자 로컬 저장 삭제
+      if (currentUser) {
+        localStorage.removeItem(getTodaySeatKey(currentUser.uid))
+      }
+
+      restoredSeatNumber = null
+      renderSeats()
+      seatInfoMain.textContent = '좌석을 선택하면 정보가 표시됩니다.'
+      seatInfoSub.textContent = '사용을 누른 시각은 이후 Firebase로 전송할 예정입니다.'
+      updateReleaseButtonState()
+    } catch (err) {
+      console.error('❌ 좌석 해제 기록 저장 실패:', err)
+      console.error('에러 상세:', {
+        code: err?.code,
+        message: err?.message,
+        stack: err?.stack,
+      })
+
+      // Firestore 규칙 문제인지 확인
+      if (err?.code === 'permission-denied') {
+        alert(
+          '⚠️ Firestore 규칙 문제: 좌석 해제 기록을 저장할 권한이 없습니다.\n\n' +
+          'Firebase 콘솔에서 Firestore 규칙을 확인해주세요.'
+        )
+      } else if (err?.code === 'unavailable') {
+        alert('⚠️ 네트워크 문제: Firestore에 연결할 수 없습니다.\n잠시 후 다시 시도해주세요.')
+      } else {
+        alert(
+          '⚠️ 좌석 사용 종료 기록 저장 중 오류가 발생했습니다.\n\n' +
+          '에러 코드: ' +
+          (err?.code || '알 수 없음') +
+          '\n에러 메시지: ' +
+          (err?.message || '알 수 없음') +
+          '\n\n개발자 콘솔에서 자세한 정보를 확인할 수 있습니다.'
+        )
+      }
+
+      // UI 롤백 (저장 실패 시 원래 상태로)
+      seat.status = 'occupied'
+      seat.studentId = currentProfile.studentId
+      seat.studentName = currentProfile.studentName
+      seat.startedAt = loadTodaySeat(currentUser.uid)?.startedAt || new Date().toISOString()
+      renderSeats()
+    } finally {
+      // 버튼 다시 활성화
+      btnSeatRelease.disabled = false
+      if (btnSeatRelease.querySelector('span')) {
+        btnSeatRelease.querySelector('span').textContent = '사용 종료'
+      } else {
+        btnSeatRelease.textContent = originalReleaseButtonText
+      }
+    }
   })
 
   // 초기 렌더링
