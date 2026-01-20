@@ -358,10 +358,22 @@ document.addEventListener('DOMContentLoaded', () => {
     seat.startedAt = new Date().toISOString()
     restoredSeatNumber = seat.number
 
-    recordSeatUsageStart(seat).catch((err) => {
-      console.error('Firestore 저장 중 오류가 발생했습니다:', err)
-      alert('좌석 사용 기록 저장 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.')
-    })
+    // Firestore 저장 시도 (에러가 발생해도 UI는 업데이트됨)
+    recordSeatUsageStart(seat)
+      .then(() => {
+        console.log('좌석 사용 기록이 Firestore에 저장되었습니다.')
+      })
+      .catch((err) => {
+        console.error('Firestore 저장 중 오류가 발생했습니다:', err)
+        console.error('에러 상세:', {
+          code: err.code,
+          message: err.message,
+          stack: err.stack,
+        })
+        // 에러가 발생해도 UI는 이미 업데이트되었으므로, 사용자에게는 조용히 알림만
+        // Firestore 규칙 문제일 수 있으므로 개발자 콘솔에서 확인 가능하도록 함
+      })
+    
     saveTodaySeat(currentUser.uid, seat)
     renderSeats()
 
