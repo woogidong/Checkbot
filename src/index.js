@@ -78,12 +78,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const name = profile?.studentName || user.displayName || '로그인한 사용자'
     const studentId = profile?.studentId
     navHint.textContent = studentId
-      ? `${name} (${studentId})님, 좌석 신청 기능을 이용할 수 있습니다.`
-      : `${name}님, 좌석 신청 기능을 이용할 수 있습니다.`
+      ? `${name} (${studentId})님, 반갑습니다.`
+      : `${name}님, 반갑습니다다.`
 
     // 네비게이션 버튼 표시
-    // 로그인 버튼 상태 변경
-    loginButtonLabel.textContent = 'Google 계정으로 로그인됨'
+    // 로그인 버튼 상태 변경 (사용자 이름 표시)
+    loginButtonLabel.textContent = `${studentId} ${name}`
     btnLogin.classList.add('btn-outline')
     btnLogin.classList.remove('btn-primary')
     btnLogin.disabled = true
@@ -119,7 +119,8 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         // 최초 로그인 또는 프로필 미완성: 기본 UI는 로그인 완료 상태로 두되,
         // 좌석/모니터링 버튼은 감추고 프로필 입력 모달을 띄웁니다.
-        loginButtonLabel.textContent = 'Google 계정으로 로그인됨'
+        const displayName = user.displayName || '로그인한 사용자'
+        loginButtonLabel.textContent = `${displayName}님 로그인됨`
         btnLogin.classList.add('btn-outline')
         btnLogin.classList.remove('btn-primary')
         btnLogin.disabled = true
