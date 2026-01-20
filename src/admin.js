@@ -154,6 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
     onSnapshot(
       q,
       (snapshot) => {
+        const now = new Date()
         const latestBySeat = new Map()
 
         snapshot.forEach((doc) => {
@@ -167,14 +168,30 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         })
 
-        renderSeatGroup(leftTop, layout.leftTop, latestBySeat)
-        renderSeatGroup(leftBottom, layout.leftBottom, latestBySeat)
-        renderSeatGroup(rightTop, layout.rightTop, latestBySeat)
-        renderSeatGroup(rightBottom, layout.rightBottom, latestBySeat)
-        renderSeatGroup(bottomRow, layout.bottom, latestBySeat)
+        const isAfterCutoff = now.getHours() >= 21
 
-        renderUsageTable(latestBySeat)
-        renderSummary(latestBySeat, allSeatNumbers.length)
+        if (isAfterCutoff) {
+          // 21시 이후에는 모든 좌석을 사용 종료 상태로 간주하고 화면에서 초기화
+          const emptyUsage = new Map()
+          renderSeatGroup(leftTop, layout.leftTop, emptyUsage)
+          renderSeatGroup(leftBottom, layout.leftBottom, emptyUsage)
+          renderSeatGroup(rightTop, layout.rightTop, emptyUsage)
+          renderSeatGroup(rightBottom, layout.rightBottom, emptyUsage)
+          renderSeatGroup(bottomRow, layout.bottom, emptyUsage)
+
+          renderUsageTable(emptyUsage)
+          renderSummary(emptyUsage, allSeatNumbers.length)
+          summaryText.textContent = `${getTodayDateStr()} 21시 이후 · 좌석 사용 정보는 초기화되었습니다.`
+        } else {
+          renderSeatGroup(leftTop, layout.leftTop, latestBySeat)
+          renderSeatGroup(leftBottom, layout.leftBottom, latestBySeat)
+          renderSeatGroup(rightTop, layout.rightTop, latestBySeat)
+          renderSeatGroup(rightBottom, layout.rightBottom, latestBySeat)
+          renderSeatGroup(bottomRow, layout.bottom, latestBySeat)
+
+          renderUsageTable(latestBySeat)
+          renderSummary(latestBySeat, allSeatNumbers.length)
+        }
       },
       (error) => {
         console.error('좌석 사용 현황 구독 중 오류가 발생했습니다:', error)
