@@ -60,6 +60,8 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentUser = null
   let currentProfile = null
   let restoredSeatNumber = null
+  const ADMIN_UID = import.meta.env.VITE_ADMIN_UID || null
+  let isAdmin = false
 
   function getProfileKey(uid) {
     return `checkbot_profile_${uid}`
@@ -118,6 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     currentUser = user
     currentProfile = profile
+    isAdmin = ADMIN_UID && user.uid === ADMIN_UID
     updateUserInfoUI()
 
     restoreTodaySeatSelection()
@@ -406,6 +409,35 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // 관리자용: 현재 좌석 사용자를 강제로 해제하는 간단한 기록
+  async function recordSeatForceRelease(seatNumber) {
+    if (!db) {
+      console.error('Firestore 데이터베이스가 초기화되지 않았습니다.')
+      return
+    }
+    const now = new Date()
+    const yyyy = now.getFullYear()
+    const mm = String(now.getMonth() + 1).padStart(2, '0')
+    const dd = String(now.getDate()).padStart(2, '0')
+    const hh = String(now.getHours()).padStart(2, '0')
+    const min = String(now.getMinutes()).padStart(2, '0')
+
+    const dateStr = `${yyyy}-${mm}-${dd}`
+    const timeStr = `${hh}:${min}`
+
+    const payload = {
+      seatId: Number(seatNumber) || seatNumber,
+      seatNumber: Number(seatNumber) || seatNumber,
+      released: true,
+      date: dateStr,
+      time: timeStr,
+      clickedAt: serverTimestamp(),
+      forceReleasedBy: currentUser ? currentUser.uid : null,
+    }
+
+    await addDoc(collection(db, 'seatUsages'), payload)
+  }
+
   async function recordSeatRelease(seat) {
     try {
       // 필수 데이터 검증
@@ -486,6 +518,43 @@ document.addEventListener('DOMContentLoaded', () => {
     const seat = getSeatByNumber(selectedSeatNumber)
     if (!seat) return
 
+    // 관리자 계정: 좌석 신청이 아니라 "좌석 비우기" 기능으로 동작
+    if (isAdmin) {
+      if (seat.status !== 'occupied') {
+        alert(`${seat.number}번 좌석은 이미 비어 있습니다.`)
+        closeSeatModal()
+        return
+      }
+
+      const originalButtonTextAdmin = btnSeatUse.textContent || btnSeatUse.innerText || '사용'
+      btnSeatUse.disabled = true
+      btnSeatUse.textContent = '비우는 중...'
+
+      try {
+        await recordSeatForceRelease(seat.number)
+
+        // 로컬 좌석 상태를 비우기
+        seat.status = 'available'
+        seat.studentId = null
+        seat.studentName = null
+        seat.startedAt = null
+        renderSeats()
+
+        seatInfoMain.textContent = '좌석을 선택하면 정보가 표시됩니다.'
+        seatInfoSub.textContent = '사용을 누른 시각은 이후 Firebase로 전송할 예정입니다.'
+        closeSeatModal()
+      } catch (err) {
+        console.error('관리자 강제 좌석 해제 중 오류:', err)
+        alert('관리자 강제 좌석 해제 중 오류가 발생했습니다. 콘솔 로그를 확인해 주세요.')
+      } finally {
+        btnSeatUse.disabled = false
+        btnSeatUse.textContent = originalButtonTextAdmin
+      }
+
+      return
+    }
+
+    // 일반 학생 계정: 기존 좌석 신청 로직
     if (!currentUser || !currentProfile) {
       alert('로그인 또는 학번/이름 정보가 없습니다. 메인 화면으로 돌아가 다시 로그인해 주세요.')
       window.location.href = '/index.html'
@@ -494,13 +563,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 이미 사용 중인 좌석인지 재확인 (모달이 띄워진 후 상태가 변경될 수 있음)
     if (seat.status === 'occupied' && restoredSeatNumber !== seat.number) {
-      const occupantInfo = seat.studentId && seat.studentName 
-        ? `${seat.studentId} ${seat.studentName}` 
-        : '다른 사용자'
+      const occupantInfo =
+        seat.studentId && seat.studentName ? `${seat.studentId} ${seat.studentName}` : '다른 사용자'
       alert(
         `⚠️ ${seat.number}번 좌석은 현재 사용 중입니다.\n\n` +
-        `사용자: ${occupantInfo}\n\n` +
-        `다른 좌석을 선택해주세요.`
+          `사용자: ${occupantInfo}\n\n` +
+          `다른 좌석을 선택해주세요.`
       )
       closeSeatModal()
       return
@@ -569,21 +637,21 @@ document.addEventListener('DOMContentLoaded', () => {
       if (err?.code === 'permission-denied') {
         alert(
           '⚠️ Firestore 규칙 문제: 좌석 사용 기록을 저장할 권한이 없습니다.\n\n' +
-          'Firebase 콘솔에서 Firestore 규칙을 확인해주세요:\n' +
-          'match /seatUsages/{document} {\n' +
-          '  allow read, write: if request.auth != null;\n' +
-          '}'
+            'Firebase 콘솔에서 Firestore 규칙을 확인해주세요:\n' +
+            'match /seatUsages/{document} {\n' +
+            '  allow read, write: if request.auth != null;\n' +
+            '}'
         )
       } else if (err?.code === 'unavailable') {
         alert('⚠️ 네트워크 문제: Firestore에 연결할 수 없습니다.\n잠시 후 다시 시도해주세요.')
       } else {
         alert(
           '⚠️ 좌석 사용 기록 저장 중 오류가 발생했습니다.\n\n' +
-          '에러 코드: ' +
-          (err?.code || '알 수 없음') +
-          '\n에러 메시지: ' +
-          (err?.message || '알 수 없음') +
-          '\n\n개발자 콘솔에서 자세한 정보를 확인할 수 있습니다.'
+            '에러 코드: ' +
+            (err?.code || '알 수 없음') +
+            '\n에러 메시지: ' +
+            (err?.message || '알 수 없음') +
+            '\n\n개발자 콘솔에서 자세한 정보를 확인할 수 있습니다.'
         )
       }
 
@@ -595,7 +663,8 @@ document.addEventListener('DOMContentLoaded', () => {
           prevSeat.status = 'occupied'
           prevSeat.studentId = currentProfile.studentId
           prevSeat.studentName = currentProfile.studentName
-          prevSeat.startedAt = loadTodaySeat(currentUser.uid)?.startedAt || new Date().toISOString()
+          prevSeat.startedAt =
+            loadTodaySeat(currentUser.uid)?.startedAt || new Date().toISOString()
         }
       }
       renderSeats()
