@@ -229,6 +229,11 @@ a:hover {
   align-items: flex-start;
 }
 
+/* 교사용 페이지에서 위/아래로 패널을 쌓기 위한 변형 */
+.seat-layout-main--stacked {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .seat-panel {
   padding: 16px 18px;
   border-radius: 16px;
@@ -365,8 +370,28 @@ a:hover {
 .seat-room-layout {
   display: flex;
   justify-content: center;
-  gap: 64px;
+  gap: 32px;
   margin-top: 18px;
+}
+
+/* 중앙 테이블 레이아웃 (table.png 구조 반영) */
+.seat-center-area {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 0 8px;
+}
+
+.seat-center-block {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.seat-center-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(40px, 1fr));
+  gap: 6px;
 }
 
 .seat-column {
@@ -388,10 +413,6 @@ a:hover {
 
 .seat-column-right .seat {
   min-width: 64px;
-}
-
-.seat-column-spacer {
-  width: 120px; /* 가운데 통로 */
 }
 
 .seat-column-gap-vertical {

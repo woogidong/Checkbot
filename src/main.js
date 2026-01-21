@@ -17,6 +17,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const seatRightTop = document.getElementById('seat-right-top')
   const seatRightBottom = document.getElementById('seat-right-bottom')
   const seatBottomRow = document.getElementById('seat-bottom-row')
+  const seatCenterTopLeft = document.getElementById('seat-center-top-left')
+  const seatCenterTopRight = document.getElementById('seat-center-top-right')
+  const seatCenterBottomLeft = document.getElementById('seat-center-bottom-left')
+  const seatCenterBottomRight = document.getElementById('seat-center-bottom-right')
   const seatInfoMain = document.getElementById('seat-info-main')
   const seatInfoSub = document.getElementById('seat-info-sub')
 
@@ -36,6 +40,10 @@ document.addEventListener('DOMContentLoaded', () => {
     !seatRightTop ||
     !seatRightBottom ||
     !seatBottomRow ||
+    !seatCenterTopLeft ||
+    !seatCenterTopRight ||
+    !seatCenterBottomLeft ||
+    !seatCenterBottomRight ||
     !modalBackdrop ||
     !modalSeatLabel ||
     !btnSeatUse ||
@@ -116,12 +124,48 @@ document.addEventListener('DOMContentLoaded', () => {
     subscribeToSeatUsage() // Firestore의 오늘자 좌석 사용 현황과 동기화
   })
 
+  // table.png 좌석표와 동일한 번호 배치
   const layout = {
+    // 좌측 벽면 1~16
     leftTop: [1, 2, 3, 4, 5, 6, 7, 8],
     leftBottom: [9, 10, 11, 12, 13, 14, 15, 16],
+    // 우측 벽면 23~42 (상단 8석 + 하단 12석)
     rightTop: [42, 41, 40, 39, 38, 37, 36, 35],
     rightBottom: [34, 33, 32, 31, 30, 29, 28, 27, 26, 25, 24, 23],
+    // 하단 17~22
     bottom: [17, 18, 19, 20, 21, 22],
+    // 중앙 상단 블록 (각 4열 x 7행)
+    centerTopLeft: [
+      43, 44, 45, 46,
+      51, 52, 53, 54,
+      59, 60, 61, 62,
+      67, 68, 69, 70,
+      75, 76, 77, 78,
+      83, 84, 85, 86,
+      91, 92, 93, 94,
+    ],
+    centerTopRight: [
+      47, 48, 49, 50,
+      55, 56, 57, 58,
+      63, 64, 65, 66,
+      71, 72, 73, 74,
+      79, 80, 81, 82,
+      87, 88, 89, 90,
+      95, 96, 97, 98,
+    ],
+    // 중앙 하단 블록 (각 4열 x 4행)
+    centerBottomLeft: [
+      99, 100, 101, 102,
+      107, 108, 109, 110,
+      115, 116, 117, 118,
+      123, 124, 125, 126,
+    ],
+    centerBottomRight: [
+      103, 104, 105, 106,
+      111, 112, 113, 114,
+      119, 120, 121, 122,
+      127, 128, 129, 130,
+    ],
   }
 
   const allSeatNumbers = [
@@ -130,6 +174,10 @@ document.addEventListener('DOMContentLoaded', () => {
     ...layout.rightTop,
     ...layout.rightBottom,
     ...layout.bottom,
+    ...layout.centerTopLeft,
+    ...layout.centerTopRight,
+    ...layout.centerBottomLeft,
+    ...layout.centerBottomRight,
   ]
 
   const seats = allSeatNumbers.map((num) => ({
@@ -211,6 +259,17 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderSeats() {
     renderSeatGroup(seatLeftTop, layout.leftTop)
     renderSeatGroup(seatLeftBottom, layout.leftBottom)
+
+    // 중앙 테이블 영역
+    if (seatCenterTopLeft && seatCenterTopRight) {
+      renderSeatGroup(seatCenterTopLeft, layout.centerTopLeft)
+      renderSeatGroup(seatCenterTopRight, layout.centerTopRight)
+    }
+    if (seatCenterBottomLeft && seatCenterBottomRight) {
+      renderSeatGroup(seatCenterBottomLeft, layout.centerBottomLeft)
+      renderSeatGroup(seatCenterBottomRight, layout.centerBottomRight)
+    }
+
     renderSeatGroup(seatRightTop, layout.rightTop)
     renderSeatGroup(seatRightBottom, layout.rightBottom)
     renderSeatGroup(seatBottomRow, layout.bottom)
@@ -657,6 +716,7 @@ document.addEventListener('DOMContentLoaded', () => {
       q,
       (snapshot) => {
         const now = new Date()
+        const isAfterCutoff = now.getHours() >= 21
         const latestBySeat = new Map()
 
         snapshot.forEach((doc) => {
@@ -670,62 +730,84 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         })
 
-        const isAfterCutoff = now.getHours() >= 21
+        // 21시 이후에는 "21시 이전에 시작된 세션"만 자동 종료로 간주하고,
+        // 21시 이후에 새로 신청한 좌석은 그대로 보여주기 위해 필터링 맵을 만든다.
+        const filteredBySeat = new Map()
+        latestBySeat.forEach((usage, seatNumber) => {
+          let u = usage
 
-        if (isAfterCutoff) {
-          // 21시 이후에는 모든 좌석을 사용 종료 상태로 간주
-          seats.forEach((seat) => {
+          // 이미 해제된 기록이면 제외
+          if (u && u.released) {
+            u = null
+          }
+
+          if (u && isAfterCutoff) {
+            // time 필드(HH:mm) 또는 clickedAt(Timestamp/ISO)을 이용해 21시 이전 세션인지 판별
+            let startedHour = null
+            if (typeof u.time === 'string' && u.time.length >= 2) {
+              const hh = parseInt(u.time.slice(0, 2), 10)
+              if (!Number.isNaN(hh)) startedHour = hh
+            } else if (u.clickedAt) {
+              try {
+                const d =
+                  typeof u.clickedAt.toDate === 'function'
+                    ? u.clickedAt.toDate()
+                    : new Date(u.clickedAt)
+                if (!Number.isNaN(d.getTime())) {
+                  startedHour = d.getHours()
+                }
+              } catch {
+                // 무시하고 그대로 둠
+              }
+            }
+
+            // 21시 이후 화면에서, 21시 이전에 시작된 세션은 자동 종료 처리(표시 X)
+            if (startedHour !== null && startedHour < 21) {
+              u = null
+            }
+          }
+
+          if (u) {
+            filteredBySeat.set(seatNumber, u)
+          }
+        })
+
+        // Firestore 기준으로 좌석 상태 동기화 (필터링 결과 사용)
+        seats.forEach((seat) => {
+          const usage = filteredBySeat.get(seat.number)
+          if (usage) {
+            seat.status = 'occupied'
+            seat.studentId = usage.studentId || null
+            seat.studentName = usage.userName || null
+            seat.startedAt = usage.clickedAt || null
+          } else {
             seat.status = 'available'
             seat.studentId = null
             seat.studentName = null
             seat.startedAt = null
-          })
-
-          renderSeats()
-
-          // 오늘자 로컬 좌석 정보도 초기화
-          if (currentUser) {
-            localStorage.removeItem(getTodaySeatKey(currentUser.uid))
           }
-          restoredSeatNumber = null
-          seatInfoMain.textContent = '좌석을 선택하면 정보가 표시됩니다.'
-          seatInfoSub.textContent = '사용을 누른 시각은 이후 Firebase로 전송할 예정입니다.'
+        })
+
+        renderSeats()
+
+        // 현재 로그인한 사용자의 좌석 정보 텍스트도 Firestore 기준으로 갱신
+        if (currentUser && restoredSeatNumber) {
+          const mySeatUsage = filteredBySeat.get(restoredSeatNumber)
+          if (mySeatUsage) {
+            seatInfoMain.textContent = `${restoredSeatNumber}번 좌석을 사용 중입니다.`
+            seatInfoSub.textContent = `사용자: ${mySeatUsage.studentId} ${mySeatUsage.userName} ｜ 시작 시각: ${formatStartedAtKorean(
+              mySeatUsage.clickedAt
+            )}`
+          } else {
+            // 자동 종료(21시 기준) 또는 수동 종료된 경우 상태/로컬 초기화
+            if (currentUser) {
+              localStorage.removeItem(getTodaySeatKey(currentUser.uid))
+            }
+            restoredSeatNumber = null
+            seatInfoMain.textContent = '좌석을 선택하면 정보가 표시됩니다.'
+            seatInfoSub.textContent = '사용을 누른 시각은 이후 Firebase로 전송할 예정입니다.'
+          }
           updateReleaseButtonState()
-        } else {
-          // Firestore 기준으로 좌석 상태 동기화
-          seats.forEach((seat) => {
-            const usage = latestBySeat.get(seat.number)
-            if (usage && !usage.released) {
-              seat.status = 'occupied'
-              seat.studentId = usage.studentId || null
-              seat.studentName = usage.userName || null
-              seat.startedAt = usage.clickedAt || null
-            } else {
-              seat.status = 'available'
-              seat.studentId = null
-              seat.studentName = null
-              seat.startedAt = null
-            }
-          })
-
-          renderSeats()
-
-          // 현재 로그인한 사용자의 좌석 정보 텍스트도 Firestore 기준으로 갱신
-          if (currentUser && restoredSeatNumber) {
-            const mySeatUsage = latestBySeat.get(restoredSeatNumber)
-            if (mySeatUsage && !mySeatUsage.released) {
-              seatInfoMain.textContent = `${restoredSeatNumber}번 좌석을 사용 중입니다.`
-              seatInfoSub.textContent = `사용자: ${mySeatUsage.studentId} ${mySeatUsage.userName} ｜ 시작 시각: ${formatStartedAtKorean(
-                mySeatUsage.clickedAt
-              )}`
-            } else {
-              // Firestore 상에서 더 이상 사용 중이 아니면 상태 초기화
-              restoredSeatNumber = null
-              seatInfoMain.textContent = '좌석을 선택하면 정보가 표시됩니다.'
-              seatInfoSub.textContent = '사용을 누른 시각은 이후 Firebase로 전송할 예정입니다.'
-            }
-            updateReleaseButtonState()
-          }
         }
       },
       (error) => {

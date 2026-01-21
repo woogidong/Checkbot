@@ -36,7 +36,6 @@
             <div class="seat-panel-header">
               <div>
                 <div class="seat-panel-title">좌석 선택</div>
-                
               </div>
               <div class="seat-legend">
                 <div class="seat-legend-item">
@@ -51,6 +50,7 @@
             </div>
 
             <div class="seat-room-layout" aria-label="좌석 목록">
+              <!-- 좌측 벽면 1~16번 -->
               <div class="seat-column seat-column-left">
                 <div class="door-label">출입문</div>
                 <div id="seat-left-top" class="seat-column-inner"></div>
@@ -58,8 +58,21 @@
                 <div id="seat-left-bottom" class="seat-column-inner"></div>
               </div>
 
-              <div class="seat-column-spacer"></div>
+              <!-- 중앙 테이블 구역 (43~130번) -->
+              <div class="seat-center-area">
+                <!-- 상단 중앙 블록 (43~98번) -->
+                <div class="seat-center-block seat-center-block-top">
+                  <div id="seat-center-top-left" class="seat-center-grid"></div>
+                  <div id="seat-center-top-right" class="seat-center-grid"></div>
+                </div>
+                <!-- 하단 중앙 블록 (99~130번) -->
+                <div class="seat-center-block seat-center-block-bottom">
+                  <div id="seat-center-bottom-left" class="seat-center-grid"></div>
+                  <div id="seat-center-bottom-right" class="seat-center-grid"></div>
+                </div>
+              </div>
 
+              <!-- 우측 벽면 23~42번 -->
               <div class="seat-column seat-column-right">
                 <div id="seat-right-top" class="seat-column-inner"></div>
                 <div class="seat-column-gap-vertical"></div>
@@ -67,6 +80,7 @@
               </div>
             </div>
 
+            <!-- 하단 17~22번 -->
             <div class="seat-bottom-wrapper">
               <div id="seat-bottom-row" class="seat-bottom-row"></div>
             </div>
