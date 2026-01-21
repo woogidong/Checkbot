@@ -61,7 +61,8 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentUser = null
   let currentProfile = null
   let restoredSeatNumber = null
-  const ADMIN_UID = import.meta.env.VITE_ADMIN_UID || null
+  const ADMIN_UID = import.meta.env.VITE_ADMIN_UID || ''
+  const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || ''
   let isAdmin = false
   let adminCanRequest = false
 
@@ -156,7 +157,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     currentUser = user
     currentProfile = profile
-    isAdmin = !!(ADMIN_UID && user.uid === ADMIN_UID)
+
+    // 관리자 계정 판별: UID 또는 이메일로 검사 (공백/대소문자 보정)
+    const currentUid = (user.uid || '').trim()
+    const currentEmail = (user.email || '').trim().toLowerCase()
+    const adminUid = ADMIN_UID.trim()
+    const adminEmail = ADMIN_EMAIL.trim().toLowerCase()
+
+    isAdmin =
+      (!!adminUid && currentUid === adminUid) ||
+      (!!adminEmail && !!currentEmail && currentEmail === adminEmail)
+
+    if (import.meta.env.DEV) {
+      console.log('[ADMIN_CHECK]', {
+        currentUid,
+        adminUid,
+        currentEmail,
+        adminEmail,
+        isAdmin,
+      })
+    }
+
     if (isAdmin) {
       adminCanRequest = loadAdminMode(user.uid)
     }
