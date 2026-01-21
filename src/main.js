@@ -27,6 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const userNameDisplay = document.getElementById('user-name-display')
   const userStudentIdDisplay = document.getElementById('user-student-id-display')
   const userEmailDisplay = document.getElementById('user-email-display')
+  const adminToggleModeButton = document.getElementById('btn-admin-toggle-mode')
 
   const modalBackdrop = document.getElementById('seat-modal-backdrop')
   const modalSeatLabel = document.getElementById('modal-seat-label')
@@ -62,6 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let restoredSeatNumber = null
   const ADMIN_UID = import.meta.env.VITE_ADMIN_UID || null
   let isAdmin = false
+  let adminCanRequest = false
 
   function getProfileKey(uid) {
     return `checkbot_profile_${uid}`
@@ -83,6 +85,40 @@ document.addEventListener('DOMContentLoaded', () => {
     userNameDisplay.textContent = currentProfile.studentName || '이름 없음'
     userStudentIdDisplay.textContent = currentProfile.studentId || '학번 없음'
     userEmailDisplay.textContent = currentUser.email || '이메일 없음'
+  }
+
+  function getAdminModeKey(uid) {
+    return `checkbot_admin_mode_${uid}`
+  }
+
+  function loadAdminMode(uid) {
+    try {
+      const raw = localStorage.getItem(getAdminModeKey(uid))
+      if (!raw) return false
+      return raw === 'true'
+    } catch {
+      return false
+    }
+  }
+
+  function saveAdminMode(uid, canRequest) {
+    try {
+      localStorage.setItem(getAdminModeKey(uid), canRequest ? 'true' : 'false')
+    } catch {
+      // ignore
+    }
+  }
+
+  function updateAdminToggleUI() {
+    if (!adminToggleModeButton) return
+    if (!isAdmin) {
+      adminToggleModeButton.classList.add('hidden')
+      return
+    }
+    adminToggleModeButton.classList.remove('hidden')
+    adminToggleModeButton.textContent = adminCanRequest
+      ? '관리자: 좌석 신청 가능'
+      : '관리자: 좌석 신청 불가(비우기 전용)'
   }
 
   function formatStartedAtKorean(isoString) {
@@ -120,8 +156,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     currentUser = user
     currentProfile = profile
-    isAdmin = ADMIN_UID && user.uid === ADMIN_UID
+    isAdmin = !!(ADMIN_UID && user.uid === ADMIN_UID)
+    if (isAdmin) {
+      adminCanRequest = loadAdminMode(user.uid)
+    }
     updateUserInfoUI()
+    updateAdminToggleUI()
 
     restoreTodaySeatSelection()
     subscribeToSeatUsage() // Firestore의 오늘자 좌석 사용 현황과 동기화
@@ -511,6 +551,24 @@ document.addEventListener('DOMContentLoaded', () => {
     seatInfoMain.textContent = '좌석을 선택하면 정보가 표시됩니다.'
     seatInfoSub.textContent = '사용을 누른 시각은 이후 Firebase로 전송할 예정입니다.'
   })
+
+  // 관리자 전용: 좌석 신청 가능/불가능 모드 토글
+  if (adminToggleModeButton) {
+    adminToggleModeButton.addEventListener('click', () => {
+      if (!isAdmin) return
+      adminCanRequest = !adminCanRequest
+      if (currentUser) {
+        saveAdminMode(currentUser.uid, adminCanRequest)
+      }
+      updateAdminToggleUI()
+
+      if (adminCanRequest) {
+        alert('관리자 모드: 이제 학생과 동일하게 좌석을 신청할 수 있습니다.')
+      } else {
+        alert('관리자 모드: 이제 좌석 신청은 불가하고, 좌석 비우기 전용으로 동작합니다.')
+      }
+    })
+  }
 
   btnSeatUse.addEventListener('click', async () => {
     if (selectedSeatNumber === null) return
