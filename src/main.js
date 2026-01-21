@@ -28,6 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const userStudentIdDisplay = document.getElementById('user-student-id-display')
   const userEmailDisplay = document.getElementById('user-email-display')
   const adminToggleModeButton = document.getElementById('btn-admin-toggle-mode')
+  const serviceToggleButton = document.getElementById('btn-toggle-service')
 
   const modalBackdrop = document.getElementById('seat-modal-backdrop')
   const modalSeatLabel = document.getElementById('modal-seat-label')
@@ -65,6 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || ''
   let isAdmin = false
   let adminCanRequest = false
+  let serviceEnabled = true
 
   function getProfileKey(uid) {
     return `checkbot_profile_${uid}`
@@ -86,6 +88,28 @@ document.addEventListener('DOMContentLoaded', () => {
     userNameDisplay.textContent = currentProfile.studentName || '이름 없음'
     userStudentIdDisplay.textContent = currentProfile.studentId || '학번 없음'
     userEmailDisplay.textContent = currentUser.email || '이메일 없음'
+  }
+
+  function getServiceKey() {
+    return 'checkbot_seat_service_enabled'
+  }
+
+  function loadServiceEnabled() {
+    try {
+      const raw = localStorage.getItem(getServiceKey())
+      if (raw === null) return true
+      return raw === 'true'
+    } catch {
+      return true
+    }
+  }
+
+  function saveServiceEnabled(enabled) {
+    try {
+      localStorage.setItem(getServiceKey(), enabled ? 'true' : 'false')
+    } catch {
+      // ignore
+    }
   }
 
   function getAdminModeKey(uid) {
@@ -111,15 +135,27 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function updateAdminToggleUI() {
-    if (!adminToggleModeButton) return
-    if (!isAdmin) {
-      adminToggleModeButton.classList.add('hidden')
-      return
+    if (adminToggleModeButton) {
+      if (!isAdmin) {
+        adminToggleModeButton.classList.add('hidden')
+      } else {
+        adminToggleModeButton.classList.remove('hidden')
+        adminToggleModeButton.textContent = adminCanRequest
+          ? '관리자: 좌석 신청 가능'
+          : '관리자: 좌석 신청 불가(비우기 전용)'
+      }
     }
-    adminToggleModeButton.classList.remove('hidden')
-    adminToggleModeButton.textContent = adminCanRequest
-      ? '관리자: 좌석 신청 가능'
-      : '관리자: 좌석 신청 불가(비우기 전용)'
+
+    if (serviceToggleButton) {
+      if (!isAdmin) {
+        serviceToggleButton.classList.add('hidden')
+      } else {
+        serviceToggleButton.classList.remove('hidden')
+        serviceToggleButton.textContent = serviceEnabled
+          ? '서비스: 신청 가능'
+          : '서비스: 신청 중지됨'
+      }
+    }
   }
 
   function formatStartedAtKorean(isoString) {
@@ -180,6 +216,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (isAdmin) {
       adminCanRequest = loadAdminMode(user.uid)
+      serviceEnabled = loadServiceEnabled()
+    } else {
+      serviceEnabled = loadServiceEnabled()
     }
     updateUserInfoUI()
     updateAdminToggleUI()
@@ -358,6 +397,13 @@ document.addEventListener('DOMContentLoaded', () => {
     selectedSeatNumber = seatNumber
     const seat = getSeatByNumber(seatNumber)
     if (!seat) return
+
+    // 서비스가 중지된 경우: 관리자 "비우기 전용 모드"만 예외 허용
+    if (!serviceEnabled && !(isAdmin && !adminCanRequest)) {
+      alert('현재 좌석 신청 서비스가 일시 중지된 상태입니다.\n잠시 후 다시 이용해 주세요.')
+      selectedSeatNumber = null
+      return
+    }
 
     // 이미 사용 중인 좌석인지 확인
     if (seat.status === 'occupied') {
@@ -587,6 +633,22 @@ document.addEventListener('DOMContentLoaded', () => {
         alert('관리자 모드: 이제 학생과 동일하게 좌석을 신청할 수 있습니다.')
       } else {
         alert('관리자 모드: 이제 좌석 신청은 불가하고, 좌석 비우기 전용으로 동작합니다.')
+      }
+    })
+  }
+
+  // 관리자 전용: 좌석 신청 전체 허용/중지 토글
+  if (serviceToggleButton) {
+    serviceToggleButton.addEventListener('click', () => {
+      if (!isAdmin) return
+      serviceEnabled = !serviceEnabled
+      saveServiceEnabled(serviceEnabled)
+      updateAdminToggleUI()
+
+      if (serviceEnabled) {
+        alert('좌석 신청 서비스가 다시 시작되었습니다.')
+      } else {
+        alert('좌석 신청 서비스가 일시 중지되었습니다.\n학생들은 새로운 좌석을 신청할 수 없습니다.')
       }
     })
   }
