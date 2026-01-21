@@ -168,15 +168,10 @@ document.addEventListener('DOMContentLoaded', () => {
       tdTime.style.padding = '4px 6px'
       tdTime.textContent = row.time || ''
 
-      const tdEmail = document.createElement('td')
-      tdEmail.style.padding = '4px 6px'
-      tdEmail.textContent = row.email || ''
-
       tr.appendChild(tdSeat)
       tr.appendChild(tdId)
       tr.appendChild(tdName)
       tr.appendChild(tdTime)
-      tr.appendChild(tdEmail)
 
       usageBody.appendChild(tr)
     })
