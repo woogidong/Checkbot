@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>개인정보 수정 | Checkbot</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div class="app-shell app-shell--narrow">
+      <main class="card">
+        <header class="app-header">
+          <div class="app-title-group">
+            <h1 class="app-title">개인정보 수정</h1>
+            <p class="app-subtitle">학번과 이름을 수정할 수 있습니다.</p>
+            <div
+              id="user-info-bar"
+              class="muted"
+              style="font-size: 0.85rem; margin-top: 6px; display: flex; flex-wrap: wrap; gap: 6px;"
+            >
+              <span id="user-name-display">이름 없음</span>
+              <span>(</span>
+              <span id="user-student-id-display">학번 없음</span>
+              <span>) · </span>
+              <span id="user-email-display">이메일 없음</span>
+            </div>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <a href="/myInfo.html" class="btn btn-outline btn-sm">이용 기록으로</a>
+            <a href="/student.html" class="btn btn-outline btn-sm">좌석 신청</a>
+            <a href="/index.html" class="btn btn-outline btn-sm">메인으로</a>
+          </div>
+        </header>
+
+        <section class="app-main">
+          <section class="app-section">
+            <div class="app-section-header">
+              <h2 class="app-section-title">학번 / 이름 수정</h2>
+            </div>
+            <div class="app-section-body">
+              <form id="profile-edit-form" style="display: flex; flex-direction: column; gap: 12px;">
+                <div>
+                  <label for="edit-student-id" style="display: block; font-size: 0.85rem; margin-bottom: 4px;"
+                    >학번 (5자리 숫자)</label
+                  >
+                  <input
+                    type="text"
+                    id="edit-student-id"
+                    inputmode="numeric"
+                    pattern="\\d{5}"
+                    maxlength="5"
+                    class="input"
+                    placeholder="예: 10523"
+                    required
+                  />
+                </div>
+                <div>
+                  <label for="edit-student-name" style="display: block; font-size: 0.85rem; margin-bottom: 4px;"
+                    >이름</label
+                  >
+                  <input
+                    type="text"
+                    id="edit-student-name"
+                    class="input"
+                    placeholder="이름을 입력하세요"
+                    required
+                  />
+                </div>
+                <div class="muted" style="font-size: 0.8rem;">
+                  수정한 학번/이름은 이후 좌석 신청 화면과 이용 기록 페이지에서 함께 사용됩니다.
+                  이미 저장된 과거 이용 기록의 표기는 그대로 유지됩니다.
+                </div>
+                <div style="display: flex; gap: 8px; margin-top: 8px;">
+                  <button type="submit" class="btn btn-primary btn-sm" id="btn-profile-save">
+                    변경 사항 저장
+                  </button>
+                  <button type="button" class="btn btn-outline btn-sm" id="btn-profile-cancel">
+                    취소
+                  </button>
+                </div>
+              </form>
+            </div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="/src/editProfile.js"></script>
+  </body>
+</html>
+

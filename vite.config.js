@@ -11,6 +11,7 @@ export default defineConfig({
         student: resolve(__dirname, 'student.html'),
         teacherMonitor: resolve(__dirname, 'teacherMonitor.html'),
         myInfo: resolve(__dirname, 'myInfo.html'),
+        editProfile: resolve(__dirname, 'editProfile.html'),
       },
     },
   },
