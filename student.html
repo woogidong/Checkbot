@@ -28,11 +28,19 @@
           <div style="display: flex; gap: 8px; align-items: center;">
             <button
               type="button"
+              id="btn-toggle-service"
+              class="btn btn-outline btn-sm hidden"
+              title="관리자 전용: 좌석 신청 전체 허용/중지 전환"
+            >
+              서비스: 신청 가능
+            </button>
+            <button
+              type="button"
               id="btn-admin-toggle-mode"
               class="btn btn-outline btn-sm hidden"
               title="관리자 전용: 좌석 신청 가능/불가능 모드 전환"
             >
-              관리자: 좌석 신청 불가
+              관리자: 좌석 신청 불가(비우기 전용)
             </button>
             <a href="/myInfo.html" class="btn btn-outline btn-sm">개인정보 및 이용 기록</a>
             <a href="/index.html" class="btn btn-outline btn-sm">메인으로 돌아가기</a>
